@@ -1,4 +1,5 @@
 import os
+from typing import NamedTuple, Callable
 from tempfile import NamedTemporaryFile
 
 from commitizen import cmd
@@ -18,16 +19,38 @@ def commit(message: str, args=""):
     return c
 
 
-def get_commits(start: str, end: str = "HEAD", from_beginning: bool = False) -> list:
+class Commit(NamedTuple):
+    commit_hash: str
+    author: str
+    title: str
+    message: str
 
-    c = cmd.run(f"git log --pretty=format:%s%n%b {start}...{end}")
+
+def new_line_parser(commits: str) -> list:
+    return commits.split("\n")
+
+
+def full_commit_parser(commits: str) -> list:
+    return commits.split("\ncommit ")
+
+
+def get_commits(
+    start: str,
+    end: str = "HEAD",
+    from_beginning: bool = False,
+    pretty: str = "format:%s%n%b",
+    parser: Callable = new_line_parser,
+) -> list:
+
+    c = cmd.run(f"git log --pretty={pretty} {start}...{end}")
 
     if from_beginning:
-        c = cmd.run(f"git log --pretty=format:%s%n%b {end}")
+        c = cmd.run(f"git log --pretty={pretty} {end}")
 
     if not c.out:
         return []
-    return c.out.split("\n")
+
+    return parser(c.out)
 
 
 def tag_exist(tag: str) -> bool:
